@@ -1,0 +1,64 @@
+#More complete example to show how to read data from cost export files stored in a blob storage account
+#note that this an example and not a complete script. 
+.
+.
+.
+
+# Metadata
+Months=["202408","202409"]
+FromDate="2024-08-31"
+EndDate="2024-09-26"
+
+current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+costreport_file = f'itcarreport-{FromDate}--{EndDate}.csv'
+
+#Storage account, container and path where the exports from cost managment are stored
+storageaccount_name = <replace with yout storage account>
+account_url = f'https://{storageaccount_name}.blob.core.windows.net/'
+container_name = 'costreports'
+blob_prefix = 'daily/DailyAmortizedCosts'
+report_prefix = 'reports/'
+
+# Define what columns should be read from the cost export
+req_cols = ['SubscriptionName', 'SubscriptionId', 'ResourceGroup', 'ResourceId', 'Date', 'MeterCategory', 'MeterSubCategory', 'MeterName', 'CostInBillingCurrency', 'PricingModel']
+
+#Lookup the last modified cost report blob for each month in the period 
+print(f"Reading last modified cost blob from: {account_url}")
+
+credential = DefaultAzureCredential()
+blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
+container_client = blob_service_client.get_container_client(container_name)
+print(container_client)
+
+csv_list=[]
+for month in Months:
+    last_modified_blob = None
+    last_modified_time = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
+    print(f'{blob_prefix}/{month}')
+    for blob in container_client.list_blobs(name_starts_with=f'{blob_prefix}/{month}'):
+        
+        if blob.last_modified > last_modified_time:
+            last_modified_blob = blob.name
+            last_modified_time = blob.last_modified
+    print(f"-->The last modified blob in {month} is: {last_modified_blob}")
+    blob_client=container_client.get_blob_client(last_modified_blob)
+    usagecost=pd.read_csv(blob_client.download_blob(), usecols=req_cols, parse_dates=['Date'], low_memory=False)
+    csv_list.append(usagecost)
+usagecosts=pd.concat(csv_list, ignore_index=True)
+
+print("Usage costs reading done")
+print(usagecosts['CostInBillingCurrency'].sum())
+
+#Filtered view - we only want to include data FromDate to EndDate 
+datefilter='Date >="' + FromDate + '" & Date<="' + EndDate + '"'
+print(f"Applying date filters {datefilter}")
+usagecosts_datefiltered=usagecosts.query(datefilter)
+usagecosts=usagecosts.query(datefilter)
+print(usagecosts_datefiltered['CostInBillingCurrency'].sum())
+print(usagecosts['CostInBillingCurrency'].sum())
+
+.
+.
+.
+
+
