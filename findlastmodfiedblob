@@ -1,0 +1,31 @@
+#example snippet how to find and read cost reports in a storage account. Note that the whole script is not included here, so this is an example but will not work out of the box
+#find the last modified blobs for one or multiple months
+#read in the required columns from each blob
+#concat all the read files and create one cost report for all desired months
+.
+.
+.
+
+csv_list=[]
+for month in Months:
+    last_modified_blob = None
+    last_modified_time = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
+    print(f'{blob_prefix}/{month}')
+    for blob in container_client.list_blobs(name_starts_with=f'{blob_prefix}/{month}'):
+        
+        if blob.last_modified > last_modified_time:
+            last_modified_blob = blob.name
+            last_modified_time = blob.last_modified
+    print(f"-->The last modified blob in {month} is: {last_modified_blob}")
+    blob_client=container_client.get_blob_client(last_modified_blob)
+    usagecost=pd.read_csv(blob_client.download_blob(), usecols=req_cols, parse_dates=['Date'], low_memory=False)
+    csv_list.append(usagecost)
+usagecosts=pd.concat(csv_list, ignore_index=True)
+
+print("Usage costs reading done")
+print(usagecosts['CostInBillingCurrency'].sum())
+.
+.
+.
+.
+.
