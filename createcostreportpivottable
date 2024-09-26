@@ -1,4 +1,7 @@
 # Pivot table to group usagecosts by ResourceName, meterName, resourceGroupName, subscriptionName, SubscriptionId, and pricing model
+.
+.
+.
 
 pivot_table = usagecosts[required_columns].pivot_table(
     values='CostInBillingCurrency',
@@ -25,3 +28,7 @@ numeric_cols = pivot_table.select_dtypes(include=[np.number]).columns
 pivot_table[numeric_cols] = pivot_table[numeric_cols].applymap(lambda x: f"{x:.2f}")
 print('Pivot table:') 
 print(pivot_table)
+
+.
+.
+.
