@@ -1,0 +1,27 @@
+# Pivot table to group usagecosts by ResourceName, meterName, resourceGroupName, subscriptionName, SubscriptionId, and pricing model
+
+pivot_table = usagecosts[required_columns].pivot_table(
+    values='CostInBillingCurrency',
+    index=['ResourceName', 'ResourceGroup', 'SubscriptionName', 'SubscriptionId', 'MeterName'],
+    columns='PricingModel',
+    aggfunc='sum',
+    fill_value=0,
+)
+
+# Flatten the column headers and remove all spaces
+pivot_table.columns = [''.join(col).strip() for col in pivot_table.columns.values]
+pivot_table.reset_index(inplace=True)
+
+# Calculate the grand total for each row
+# Only consider columns that represent pricing models
+cost_columns = pivot_table.select_dtypes(include=[np.number]).columns.tolist()
+pivot_table['GrandTotal'] = pivot_table[cost_columns].sum(axis=1)
+
+# Sort by the highest grand total
+pivot_table = pivot_table.sort_values(by='GrandTotal', ascending=False)
+
+# Format the numeric columns with two decimal places
+numeric_cols = pivot_table.select_dtypes(include=[np.number]).columns
+pivot_table[numeric_cols] = pivot_table[numeric_cols].applymap(lambda x: f"{x:.2f}")
+print('Pivot table:') 
+print(pivot_table)
