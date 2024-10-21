@@ -29,6 +29,3 @@ print(usagecosts['CostInBillingCurrency'].sum())
 .
 .
 .
-
-
-testing repo push
